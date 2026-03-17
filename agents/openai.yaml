@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pic to Pick"
+  short_description: "Home-space to Amazon cart + preview report"
+  default_prompt: "Use $pic-to-pick for the focused home-space Amazon flow: diagnose space, add core items to Amazon cart, generate cart-only structure-locked preview, and output a report-project deliverable."

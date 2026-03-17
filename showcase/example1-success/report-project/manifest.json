@@ -1,0 +1,9 @@
+{
+  "mode": "showcase-light",
+  "contains": [
+    "REPORT.md",
+    "images/01-base-space.jpg",
+    "images/02-final-preview.jpg",
+    "images/03-structure-compare.jpg"
+  ]
+}
