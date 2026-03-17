@@ -10,6 +10,12 @@
 
 兼容 OpenClaw、Claude Code 和 Codex。
 
+### 场景速览
+
+- `Example 1（家居）`：空房客厅 -> Amazon 真实购物车 -> 保持空间结构不变的家居预览。
+- `Example 2（OOTD）`：儿童 mock 图 -> Amazon 真实穿搭购物车 -> 基于购物车约束的穿搭预览。
+- `Example 3（Beauty）`：脸部美妆 + 美甲 -> 与商品颜色/风格一致的编辑 -> 含购物车证据与金额报告。
+
 ## Examples
 
 ### Example 1: 从空房客厅到可购买方案
@@ -28,30 +34,26 @@
 
 <table>
   <tr>
-    <th width="50%">原始空间</th>
-    <th width="50%">最终预览</th>
+    <th width="25%">原始空间</th>
+    <th width="25%">商品参考板</th>
+    <th width="25%">最终预览</th>
+    <th width="25%">购物车证据</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example1-success/report-project/images/01-base-space.jpg" alt="原始空房客厅" width="100%">
     </td>
     <td>
+      <img src="showcase/example1-success/report-project/images/05-product-board.jpg" alt="商品参考板" width="100%">
+    </td>
+    <td>
       <img src="showcase/example1-success/report-project/images/02-final-preview.jpg" alt="最终 AI 预览图" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">购物车证据</th>
-    <th width="50%">商品参考板</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example1-success/report-project/images/04-cart-evidence.jpg" alt="Amazon 购物车截图" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example1-success/report-project/images/05-product-board.jpg" alt="商品参考板" width="72%">
+    <td>
+      <details>
+        <summary>查看购物车证据</summary>
+        <img src="showcase/example1-success/report-project/images/04-cart-evidence.jpg" alt="Amazon 购物车截图" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -97,30 +99,26 @@
 
 <table>
   <tr>
-    <th width="50%">原始图</th>
-    <th width="50%">最终预览</th>
+    <th width="25%">原始图</th>
+    <th width="25%">商品参考板</th>
+    <th width="25%">最终预览</th>
+    <th width="25%">购物车证据</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example2-ootd/report-project/images/01-base-space.jpg" alt="Example2 原始图" width="100%">
     </td>
     <td>
+      <img src="showcase/example2-ootd/report-project/images/05-product-board.jpg" alt="Example2 商品参考板" width="100%">
+    </td>
+    <td>
       <img src="showcase/example2-ootd/report-project/images/02-final-preview.jpg" alt="Example2 最终预览图" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">购物车证据</th>
-    <th width="50%">商品参考板</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example2-ootd/report-project/images/04-cart-evidence.jpg" alt="Example2 购物车截图" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example2-ootd/report-project/images/05-product-board.jpg" alt="Example2 商品参考板" width="72%">
+    <td>
+      <details>
+        <summary>查看购物车证据</summary>
+        <img src="showcase/example2-ootd/report-project/images/04-cart-evidence.jpg" alt="Example2 购物车截图" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -145,30 +143,26 @@
 
 <table>
   <tr>
-    <th width="50%">原始图</th>
-    <th width="50%">最终预览</th>
+    <th width="25%">原始图</th>
+    <th width="25%">商品参考板</th>
+    <th width="25%">最终预览</th>
+    <th width="25%">购物车证据</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example3-beauty-face/report-project/images/01-base-space.jpg" alt="脸部美妆原始图" width="100%">
     </td>
     <td>
+      <img src="showcase/example3-beauty-face/report-project/images/05-product-board.jpg" alt="脸部美妆商品参考板" width="100%">
+    </td>
+    <td>
       <img src="showcase/example3-beauty-face/report-project/images/02-final-preview.jpg" alt="脸部美妆最终预览图" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">购物车证据</th>
-    <th width="50%">商品参考板</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example3-beauty-face/report-project/images/04-cart-evidence.jpg" alt="脸部美妆购物车截图" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example3-beauty-face/report-project/images/05-product-board.jpg" alt="脸部美妆商品参考板" width="72%">
+    <td>
+      <details>
+        <summary>查看购物车证据</summary>
+        <img src="showcase/example3-beauty-face/report-project/images/04-cart-evidence.jpg" alt="脸部美妆购物车截图" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -177,30 +171,26 @@
 
 <table>
   <tr>
-    <th width="50%">原始图</th>
-    <th width="50%">最终预览</th>
+    <th width="25%">原始图</th>
+    <th width="25%">商品参考板</th>
+    <th width="25%">最终预览</th>
+    <th width="25%">购物车证据</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example3-beauty-nail/report-project/images/01-base-space.jpg" alt="美甲原始图" width="100%">
     </td>
     <td>
+      <img src="showcase/example3-beauty-nail/report-project/images/05-product-board.jpg" alt="美甲商品参考板" width="100%">
+    </td>
+    <td>
       <img src="showcase/example3-beauty-nail/report-project/images/02-final-preview.jpg" alt="美甲最终预览图" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">购物车证据</th>
-    <th width="50%">商品参考板</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example3-beauty-nail/report-project/images/04-cart-evidence.jpg" alt="美甲购物车截图" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example3-beauty-nail/report-project/images/05-product-board.jpg" alt="美甲商品参考板" width="72%">
+    <td>
+      <details>
+        <summary>查看购物车证据</summary>
+        <img src="showcase/example3-beauty-nail/report-project/images/04-cart-evidence.jpg" alt="美甲购物车截图" width="100%">
+      </details>
     </td>
   </tr>
 </table>

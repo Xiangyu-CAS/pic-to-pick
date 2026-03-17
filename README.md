@@ -10,6 +10,12 @@ It understands the space and style cues in the image, suggests what to buy, and 
 
 Compatible with OpenClaw, Claude Code, and Codex.
 
+### Quick Brief
+
+- `Example 1 (Home)`: Empty living room -> real Amazon cart -> structure-locked furnished preview.
+- `Example 2 (OOTD)`: Kid mock photo -> real outfit/accessory cart -> cart-constrained OOTD preview.
+- `Example 3 (Beauty)`: Face makeup + nails -> product-aligned edits -> cart evidence and pricing report.
+
 ## Examples
 
 ### Example 1: Empty living room to shoppable setup
@@ -28,30 +34,26 @@ Full report: [showcase/example1-success/report-project/REPORT.md](showcase/examp
 
 <table>
   <tr>
-    <th width="50%">Original space</th>
-    <th width="50%">Final preview</th>
+    <th width="25%">Base</th>
+    <th width="25%">Product</th>
+    <th width="25%">Preview</th>
+    <th width="25%">Cart Evidence</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example1-success/report-project/images/01-base-space.jpg" alt="Original empty living room" width="100%">
     </td>
     <td>
+      <img src="showcase/example1-success/report-project/images/05-product-board.jpg" alt="Product reference board" width="100%">
+    </td>
+    <td>
       <img src="showcase/example1-success/report-project/images/02-final-preview.jpg" alt="Final AI preview" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">Cart evidence</th>
-    <th width="50%">Product board</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example1-success/report-project/images/04-cart-evidence.jpg" alt="Amazon cart evidence" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example1-success/report-project/images/05-product-board.jpg" alt="Product reference board" width="72%">
+    <td>
+      <details>
+        <summary>Show cart evidence</summary>
+        <img src="showcase/example1-success/report-project/images/04-cart-evidence.jpg" alt="Amazon cart evidence" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -97,30 +99,26 @@ Full report: [showcase/example2-ootd/report-project/REPORT.md](showcase/example2
 
 <table>
   <tr>
-    <th width="50%">Original image</th>
-    <th width="50%">Final preview</th>
+    <th width="25%">Base</th>
+    <th width="25%">Product</th>
+    <th width="25%">Preview</th>
+    <th width="25%">Cart Evidence</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example2-ootd/report-project/images/01-base-space.jpg" alt="Example2 original" width="100%">
     </td>
     <td>
+      <img src="showcase/example2-ootd/report-project/images/05-product-board.jpg" alt="Example2 product board" width="100%">
+    </td>
+    <td>
       <img src="showcase/example2-ootd/report-project/images/02-final-preview.jpg" alt="Example2 final preview" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">Cart evidence</th>
-    <th width="50%">Product board</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example2-ootd/report-project/images/04-cart-evidence.jpg" alt="Example2 cart evidence" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example2-ootd/report-project/images/05-product-board.jpg" alt="Example2 product board" width="72%">
+    <td>
+      <details>
+        <summary>Show cart evidence</summary>
+        <img src="showcase/example2-ootd/report-project/images/04-cart-evidence.jpg" alt="Example2 cart evidence" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -145,30 +143,26 @@ Nail design report: [showcase/example3-beauty-nail/report-project/REPORT.md](sho
 
 <table>
   <tr>
-    <th width="50%">Original image</th>
-    <th width="50%">Final preview</th>
+    <th width="25%">Base</th>
+    <th width="25%">Product</th>
+    <th width="25%">Preview</th>
+    <th width="25%">Cart Evidence</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example3-beauty-face/report-project/images/01-base-space.jpg" alt="Beauty face original" width="100%">
     </td>
     <td>
+      <img src="showcase/example3-beauty-face/report-project/images/05-product-board.jpg" alt="Beauty face product board" width="100%">
+    </td>
+    <td>
       <img src="showcase/example3-beauty-face/report-project/images/02-final-preview.jpg" alt="Beauty face final preview" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">Cart evidence</th>
-    <th width="50%">Product board</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example3-beauty-face/report-project/images/04-cart-evidence.jpg" alt="Beauty face cart evidence" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example3-beauty-face/report-project/images/05-product-board.jpg" alt="Beauty face product board" width="72%">
+    <td>
+      <details>
+        <summary>Show cart evidence</summary>
+        <img src="showcase/example3-beauty-face/report-project/images/04-cart-evidence.jpg" alt="Beauty face cart evidence" width="100%">
+      </details>
     </td>
   </tr>
 </table>
@@ -177,30 +171,26 @@ Nail design report: [showcase/example3-beauty-nail/report-project/REPORT.md](sho
 
 <table>
   <tr>
-    <th width="50%">Original image</th>
-    <th width="50%">Final preview</th>
+    <th width="25%">Base</th>
+    <th width="25%">Product</th>
+    <th width="25%">Preview</th>
+    <th width="25%">Cart Evidence</th>
   </tr>
   <tr>
     <td>
       <img src="showcase/example3-beauty-nail/report-project/images/01-base-space.jpg" alt="Beauty nail original" width="100%">
     </td>
     <td>
+      <img src="showcase/example3-beauty-nail/report-project/images/05-product-board.jpg" alt="Beauty nail product board" width="100%">
+    </td>
+    <td>
       <img src="showcase/example3-beauty-nail/report-project/images/02-final-preview.jpg" alt="Beauty nail final preview" width="100%">
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th width="50%">Cart evidence</th>
-    <th width="50%">Product board</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="showcase/example3-beauty-nail/report-project/images/04-cart-evidence.jpg" alt="Beauty nail cart evidence" width="58%">
-    </td>
-    <td align="center">
-      <img src="showcase/example3-beauty-nail/report-project/images/05-product-board.jpg" alt="Beauty nail product board" width="72%">
+    <td>
+      <details>
+        <summary>Show cart evidence</summary>
+        <img src="showcase/example3-beauty-nail/report-project/images/04-cart-evidence.jpg" alt="Beauty nail cart evidence" width="100%">
+      </details>
     </td>
   </tr>
 </table>
