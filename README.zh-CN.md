@@ -16,6 +16,10 @@
 - `Example 2（OOTD）`：儿童 mock 图 -> Amazon 真实穿搭购物车 -> 基于购物车约束的穿搭预览。
 - `Example 3（Beauty）`：脸部美妆 + 美甲 -> 与商品颜色/风格一致的编辑 -> 含购物车证据与金额报告。
 
+### 评审海报
+
+![pic-to-pick 评审海报（16:9）](assets/poster-16x9.jpg)
+
 ## Examples
 
 ### Example 1: 从空房客厅到可购买方案

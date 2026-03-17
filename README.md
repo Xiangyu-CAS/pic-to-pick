@@ -16,6 +16,10 @@ Compatible with OpenClaw, Claude Code, and Codex.
 - `Example 2 (OOTD)`: Kid mock photo -> real outfit/accessory cart -> cart-constrained OOTD preview.
 - `Example 3 (Beauty)`: Face makeup + nails -> product-aligned edits -> cart evidence and pricing report.
 
+### Judge Poster
+
+![pic-to-pick judge poster (16:9)](assets/poster-16x9.jpg)
+
 ## Examples
 
 ### Example 1: Empty living room to shoppable setup
