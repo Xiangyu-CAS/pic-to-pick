@@ -17,6 +17,18 @@ from pathlib import Path
 
 CART_JS = r"""
 () => {
+  const normalizeMoney = (text) => {
+    if (!text) return null;
+    const raw = String(text).replace(/\s+/g, " ").trim();
+    const m = raw.replace(/,/g, "").match(/([A-Za-z$€£¥]{0,4})\s*([0-9]+(?:\.[0-9]{1,2})?)/);
+    if (!m) return null;
+    return {
+      text: raw,
+      currency: (m[1] || "").trim() || null,
+      value: Number(m[2]),
+    };
+  };
+
   const items = [];
   const rows = document.querySelectorAll(".sc-list-item-content");
   rows.forEach((row) => {
@@ -26,7 +38,29 @@ CART_JS = r"""
     let title = (titleEl?.textContent || img?.alt || "").replace(/\s+/g, " ").trim();
     const src = img?.getAttribute("data-old-hires") || img?.getAttribute("src") || "";
     const href = link?.href || "";
-    if (title && src) items.push({ title, src, href });
+    const priceEl = row.querySelector(".sc-price .a-offscreen, .sc-product-price .a-offscreen, .a-price .a-offscreen, .sc-price");
+    const priceText = (priceEl?.textContent || "").replace(/\s+/g, " ").trim();
+    const price = normalizeMoney(priceText);
+
+    const qtyPrompt = row.querySelector("span.a-dropdown-prompt");
+    const qtyRaw = (qtyPrompt?.textContent || "").trim();
+    const qtyNum = Number((qtyRaw.match(/\d+/) || [])[0] || 1);
+    const quantity = Number.isFinite(qtyNum) && qtyNum > 0 ? qtyNum : 1;
+
+    const lineTotalValue = price?.value != null ? Number((price.value * quantity).toFixed(2)) : null;
+
+    if (title && src) {
+      items.push({
+        title,
+        src,
+        href,
+        price_text: price?.text || null,
+        price_value: price?.value ?? null,
+        currency: price?.currency || null,
+        quantity,
+        line_total_value: lineTotalValue,
+      });
+    }
   });
   const uniq = [];
   const seen = new Set();
@@ -35,7 +69,21 @@ CART_JS = r"""
     seen.add(it.src);
     uniq.push(it);
   }
-  return uniq;
+  const subtotalEl =
+    document.querySelector("#sc-subtotal-amount-activecart") ||
+    document.querySelector("#sc-subtotal-amount-buybox") ||
+    document.querySelector(".sc-subtotal .a-color-price");
+  const subtotalText = (subtotalEl?.textContent || "").replace(/\s+/g, " ").trim();
+  const subtotal = normalizeMoney(subtotalText);
+  const computedTotal = uniq.reduce((acc, it) => acc + (Number(it.line_total_value) || 0), 0);
+
+  return {
+    items: uniq,
+    subtotal_text: subtotal?.text || null,
+    subtotal_value: subtotal?.value ?? null,
+    currency: subtotal?.currency || null,
+    computed_items_total: Number(computedTotal.toFixed(2)),
+  };
 }
 """
 
@@ -141,9 +189,17 @@ def main() -> None:
             CART_JS,
         ]
     )
-    items = first_json_blob(raw)
+    payload = first_json_blob(raw)
+    if isinstance(payload, list):
+        items = payload
+        summary = {}
+    elif isinstance(payload, dict):
+        items = payload.get("items", [])
+        summary = payload
+    else:
+        raise RuntimeError("Unexpected evaluate payload, expected JSON object or array")
     if not isinstance(items, list):
-        raise RuntimeError("Unexpected evaluate payload, expected JSON array")
+        raise RuntimeError("Unexpected evaluate payload, expected items list")
 
     items = items[: args.max_items]
     clean_items = []
@@ -156,7 +212,24 @@ def main() -> None:
         if not title or not src:
             continue
 
-        clean = {"title": title, "src": src, "href": href}
+        quantity = int(item.get("quantity", 1) or 1)
+        if quantity < 1:
+            quantity = 1
+        price_text = item.get("price_text")
+        price_value = item.get("price_value")
+        line_total_value = item.get("line_total_value")
+        currency = item.get("currency")
+
+        clean = {
+            "title": title,
+            "src": src,
+            "href": href,
+            "price_text": price_text,
+            "price_value": price_value,
+            "currency": currency,
+            "quantity": quantity,
+            "line_total_value": line_total_value,
+        }
         clean_items.append(clean)
 
         hi = to_hires_url(src, args.cdn_size)
@@ -175,16 +248,28 @@ def main() -> None:
             }
         )
 
+    cart_summary = {
+        "subtotal_text": summary.get("subtotal_text"),
+        "subtotal_value": summary.get("subtotal_value"),
+        "currency": summary.get("currency"),
+        "computed_items_total": summary.get("computed_items_total"),
+        "items_count": len(downloaded_items),
+    }
+
     (out_dir / "cart-items-clean.json").write_text(
         json.dumps(clean_items, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     (out_dir / "cart-items-downloaded.json").write_text(
         json.dumps(downloaded_items, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    (out_dir / "cart-summary.json").write_text(
+        json.dumps(cart_summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print(f"target_id: {target_id}")
     print(f"clean_json: {(out_dir / 'cart-items-clean.json')}")
     print(f"downloaded_json: {(out_dir / 'cart-items-downloaded.json')}")
+    print(f"summary_json: {(out_dir / 'cart-summary.json')}")
     print(f"image_dir: {image_dir}")
 
 

@@ -121,17 +121,9 @@ def load_images(paths: list[str]):
 
 
 def choose_resolution(default_res: str, images) -> str:
-    if not images or default_res != "1K":
-        return default_res
-    max_dim = 0
-    for image in images:
-        w, h = image.size
-        max_dim = max(max_dim, w, h)
-    if max_dim >= 3000:
-        return "4K"
-    if max_dim >= 1500:
-        return "2K"
-    return "1K"
+    # Keep default behavior deterministic: no implicit upscaling.
+    # If higher resolution is needed, pass -r 2K or -r 4K explicitly.
+    return default_res
 
 
 def choose_aspect_ratio(aspect_ratio_arg: str, images) -> str | None:

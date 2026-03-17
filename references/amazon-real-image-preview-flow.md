@@ -19,13 +19,14 @@ python scripts/amazon_cart_pull_images.py \
   --browser-profile user \
   --target-id <cart_target_id> \
   --out-dir <run_dir> \
-  --max-items 8
+  --max-items 12
 ```
 
 Artifacts:
 
 - `<run_dir>/cart-items-clean.json`
 - `<run_dir>/cart-items-downloaded.json`
+- `<run_dir>/cart-summary.json`
 - `<run_dir>/product-images-real/item-*.jpg`
 
 ## 3) Generate strict preview
@@ -39,11 +40,17 @@ uv run scripts/nano_banana_generate_image.py \
   --enforce-cart-only \
   --must-have-category sofa \
   --must-have-category stool/ottoman \
+  --must-have-category "coffee table" \
+  --must-have-category armchair \
+  --must-have-category "side table" \
+  --must-have-category curtain \
+  --must-have-category rug \
+  --must-have-category "floor lamp" \
   --enforce-structure-lock \
   --aspect-ratio auto \
-  -p "Use only cart products and keep room structure unchanged." \
+  -p "Use only cart products and keep room structure unchanged. Avoid sparse layout and stage a complete living-room composition." \
   -f <run_dir>/preview.png \
-  -r 2K
+  -r 1K
 ```
 
 ## 4) Build report project
@@ -62,3 +69,4 @@ python scripts/build_home_report_project.py \
 - Door/window/wall/built-ins/viewpoint unchanged.
 - No purchasable objects outside cart items.
 - Report language consistent with user language.
+- Report includes real cart amounts: unit price, quantity, line total, and cart total.

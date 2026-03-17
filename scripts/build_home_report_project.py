@@ -373,6 +373,14 @@ def collect_translatable_strings(diagnosis: dict, items: list[dict]) -> list[str
                 "report_local_image",
                 "downloaded_from",
                 "highres_try",
+                "price_text",
+                "price_value",
+                "currency",
+                "quantity",
+                "line_total_value",
+                "subtotal_text",
+                "subtotal_value",
+                "computed_items_total",
             }
             for k, v in value.items():
                 if k in skip_keys:
@@ -455,6 +463,21 @@ def sanitize_local_path(value: str) -> str:
     return text
 
 
+def to_float(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def format_money(value: float | None, currency: str | None = None) -> str:
+    if value is None:
+        return "-"
+    cur = (currency or "").strip()
+    if cur:
+        return f"{cur} {value:,.2f}"
+    return f"{value:,.2f}"
+
+
 def build_buy_table(rows: list[dict], currency: str, lang: str) -> str:
     if not rows:
         return "_无数据_" if lang.lower().startswith("zh") else "_No data_"
@@ -494,14 +517,14 @@ def build_cart_table(items: list[dict], lang: str, image_folder: str = "images/p
         return "_无购物车商品数据_" if lang.lower().startswith("zh") else "_No cart items_"
     if lang.lower().startswith("zh"):
         lines = [
-            "| 商品 | 商品图 | 商品链接 |",
-            "|---|---|---|",
+            "| 商品 | 商品图 | 单价 | 数量 | 小计 | 商品链接 |",
+            "|---|---|---:|---:|---:|---|",
         ]
         link_label = "打开商品"
     else:
         lines = [
-            "| Product | Image | Link |",
-            "|---|---|---|",
+            "| Product | Image | Unit Price | Qty | Line Total | Link |",
+            "|---|---|---:|---:|---:|---|",
         ]
         link_label = "Open"
     for idx, item in enumerate(items, start=1):
@@ -514,8 +537,56 @@ def build_cart_table(items: list[dict], lang: str, image_folder: str = "images/p
                 img_cell = f"![item-{idx}]({local_image})"
             else:
                 img_cell = f"![item-{idx}]({image_folder}/item-{idx:02d}.jpg)"
+        price_text = safe_text(item.get("price_text")) if item.get("price_text") else None
+        price_val = to_float(item.get("price_value"))
+        currency = safe_text(item.get("currency")) if item.get("currency") else ""
+        unit_price = price_text or format_money(price_val, currency if currency else None)
+        qty_val = int(item.get("quantity", 1) or 1)
+        line_total_val = to_float(item.get("line_total_value"))
+        line_total = format_money(line_total_val, currency if currency else None)
         link_cell = f"[{link_label}]({href})" if href else "-"
-        lines.append(f"| {title} | {img_cell} | {link_cell} |")
+        lines.append(
+            f"| {title} | {img_cell} | {unit_price} | {qty_val} | {line_total} | {link_cell} |"
+        )
+    return "\n".join(lines)
+
+
+def build_cart_amount_summary(items: list[dict], cart_summary: dict, lang: str) -> str:
+    values = [to_float(x.get("line_total_value")) for x in items if isinstance(x, dict)]
+    values = [v for v in values if v is not None]
+    inferred_currency = ""
+    for x in items:
+        if isinstance(x, dict) and x.get("currency"):
+            inferred_currency = str(x.get("currency")).strip()
+            break
+
+    computed_items_total = sum(values) if values else None
+    subtotal_text = safe_text(cart_summary.get("subtotal_text")) if isinstance(cart_summary, dict) else ""
+    subtotal_value = to_float(cart_summary.get("subtotal_value")) if isinstance(cart_summary, dict) else None
+    subtotal_currency = (
+        safe_text(cart_summary.get("currency"))
+        if isinstance(cart_summary, dict) and cart_summary.get("currency")
+        else inferred_currency
+    )
+    if subtotal_value is None and isinstance(cart_summary, dict):
+        subtotal_value = to_float(cart_summary.get("computed_items_total"))
+    if subtotal_value is None:
+        subtotal_value = computed_items_total
+    if not subtotal_text and subtotal_value is not None:
+        subtotal_text = format_money(subtotal_value, subtotal_currency if subtotal_currency else None)
+
+    if lang.lower().startswith("zh"):
+        lines = [
+            "- 说明：金额取自购物车页面展示的真实价格（单价/数量/小计）。",
+            f"- 商品小计合计（按条目计算）：`{format_money(computed_items_total, inferred_currency if inferred_currency else None)}`",
+            f"- 购物车显示总额：`{subtotal_text or '-'}`",
+        ]
+    else:
+        lines = [
+            "- Note: prices are extracted from real values displayed in the cart page.",
+            f"- Computed item sum (from line totals): `{format_money(computed_items_total, inferred_currency if inferred_currency else None)}`",
+            f"- Cart displayed total: `{subtotal_text or '-'}`",
+        ]
     return "\n".join(lines)
 
 
@@ -567,6 +638,7 @@ def main() -> None:
     product_board = find_latest(run_dir, ["*real-product-board*.jpg", "*product-board*.jpg"])
     diagnosis_path = find_latest(run_dir, ["*space-diagnosis*.json"])
     cart_items_path = find_latest(run_dir, ["*cart-items-downloaded*.json", "*cart-items-clean*.json"])
+    cart_summary_path = find_latest(run_dir, ["*cart-summary*.json"])
 
     # Copy core images with stable names
     copied_images = {}
@@ -589,10 +661,13 @@ def main() -> None:
     # Load json content
     diagnosis = load_json(diagnosis_path)
     cart_items = load_json(cart_items_path)
+    cart_summary = load_json(cart_summary_path)
     if not isinstance(diagnosis, dict):
         diagnosis = {}
     if not isinstance(cart_items, list):
         cart_items = []
+    if not isinstance(cart_summary, dict):
+        cart_summary = {}
 
     translation_backend = has_gemini_translation_backend()
     translation_applied = False
@@ -650,12 +725,27 @@ def main() -> None:
         cart_dst = data_dir / cart_name
         cart_dst.write_text(json.dumps(normalized_items, ensure_ascii=False, indent=2), encoding="utf-8")
         copied_data[cart_name] = f"data/{cart_name}"
+    if isinstance(cart_summary_path, Path) or cart_summary:
+        summary_name = cart_summary_path.name if isinstance(cart_summary_path, Path) else "cart-summary.json"
+        summary_dst = data_dir / summary_name
+        summary_dst.write_text(json.dumps(cart_summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        copied_data[summary_name] = f"data/{summary_name}"
 
     # Save normalized data for report usage
     normalized_cart_path = data_dir / "cart-items-report.json"
     normalized_cart_path.write_text(
         json.dumps(normalized_items, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+    numeric_line_totals = [
+        to_float(x.get("line_total_value"))
+        for x in normalized_items
+        if isinstance(x, dict) and to_float(x.get("line_total_value")) is not None
+    ]
+    computed_items_total = sum(numeric_line_totals) if numeric_line_totals else None
+    cart_subtotal_value = to_float(cart_summary.get("subtotal_value"))
+    if cart_subtotal_value is None:
+        cart_subtotal_value = to_float(cart_summary.get("computed_items_total"))
 
     total_budget = diagnosis.get("total_budget_usd", {}) if isinstance(diagnosis, dict) else {}
     budget_text = f"{args.currency} {total_budget.get('min', '-')}-{total_budget.get('max', '-')}"
@@ -708,6 +798,9 @@ def main() -> None:
 ### 购物车商品对照
 {build_cart_table(normalized_items, lang)}
 
+### 购物车金额汇总
+{build_cart_amount_summary(normalized_items, cart_summary, lang)}
+
 ### 购物车证据图
 ![cart](images/04-cart-evidence.jpg)
 
@@ -734,6 +827,7 @@ def main() -> None:
 - 数据目录：`data/`
   - `space-diagnosis.json`（若存在）
   - `cart-items-downloaded.json / cart-items-clean.json`（若存在）
+  - `cart-summary.json`（若存在）
   - `cart-items-report.json`（规范化后）
 
 ---
@@ -776,6 +870,9 @@ def main() -> None:
 ### Cart Product Table
 {build_cart_table(normalized_items, lang)}
 
+### Cart Amount Summary
+{build_cart_amount_summary(normalized_items, cart_summary, lang)}
+
 ### Cart Evidence
 ![cart](images/04-cart-evidence.jpg)
 
@@ -798,6 +895,7 @@ def main() -> None:
 - Data folder: `data/`
   - `space-diagnosis.json` (if present)
   - `cart-items-downloaded.json / cart-items-clean.json` (if present)
+  - `cart-summary.json` (if present)
   - `cart-items-report.json` (normalized)
 
 ---
@@ -822,6 +920,8 @@ Generated by `build_home_report_project.py`.
         "copied_images": copied_images,
         "copied_data": copied_data,
         "cart_items_count": len(normalized_items),
+        "cart_items_computed_total": computed_items_total,
+        "cart_subtotal_value": cart_subtotal_value,
         "has_diagnosis": bool(diagnosis),
     }
     (project_dir / "manifest.json").write_text(

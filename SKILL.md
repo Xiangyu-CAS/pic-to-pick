@@ -30,6 +30,11 @@ Not supported in this focused version:
 - Preview must be cart-only for purchasable objects.
 - If a must-have object category should appear (for example `sofa`, `stool/ottoman`), ensure it is already in cart.
 - Report language must match user language.
+- Report must include real cart amounts:
+  - per-item unit price
+  - quantity
+  - line total
+  - cart total summary
 
 ## Workflow
 
@@ -42,9 +47,14 @@ Not supported in this focused version:
 3. Amazon cart execution
 - Use `openclaw browser --browser-profile user`.
 - Add target categories to cart and verify on cart page.
+- For non-sparse layout previews, use a richer cart set (typically 9-12 items) covering:
+  - sofa / rug / coffee table / curtains / floor lamp
+  - accent chair / side table / stool-ottoman
+  - pillows-throw / plant
 
 4. Pull real cart product images
 - Run `scripts/amazon_cart_pull_images.py`.
+- Keep `cart-summary.json` for report pricing totals.
 
 5. Generate AI preview (strict)
 - Use `scripts/nano_banana_generate_image.py` with:
@@ -53,6 +63,7 @@ Not supported in this focused version:
   - `--must-have-category ...` (if needed)
   - `--enforce-structure-lock`
   - `--aspect-ratio auto`
+- Default resolution is `1K` unless explicitly overridden.
 
 6. Build report project
 - Run `scripts/build_home_report_project.py`.
@@ -75,6 +86,7 @@ A final project folder with:
 - `images/`
 - `data/`
 - `manifest.json`
+- `REPORT.md` includes pricing table and total amount summary.
 
 For an included successful sample, see:
 
