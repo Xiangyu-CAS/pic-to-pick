@@ -1,0 +1,29 @@
+{
+  "run_dir": "..",
+  "project_dir": ".",
+  "title": "美妆方案报告（美甲）",
+  "lang": "zh-CN",
+  "translate_content": "never",
+  "translation_backend_available": false,
+  "translation_applied": false,
+  "fallback_zh_applied": true,
+  "website": "Amazon",
+  "style": "Luxury rhinestone press-on nails / 宝石穿戴甲",
+  "currency": "USD",
+  "copied_images": {
+    "base": "images/01-base-space.png",
+    "preview": "images/02-final-preview.png",
+    "compare": "images/03-structure-compare.jpg",
+    "cart": "images/04-cart-evidence.jpg",
+    "product_board": "images/05-product-board.jpg"
+  },
+  "copied_data": {
+    "space-diagnosis.json": "data/space-diagnosis.json",
+    "cart-items-downloaded.json": "data/cart-items-downloaded.json",
+    "cart-summary.json": "data/cart-summary.json"
+  },
+  "cart_items_count": 1,
+  "cart_items_computed_total": 9.99,
+  "cart_subtotal_value": 9.99,
+  "has_diagnosis": true
+}

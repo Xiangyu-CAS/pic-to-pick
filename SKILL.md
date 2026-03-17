@@ -1,26 +1,26 @@
 ---
 name: pic-to-pick
-description: Focused flow for home-space shopping on Amazon: room image -> cart items -> cart-only AI preview -> report project.
+description: Amazon cart-constrained visual shopping flow for home-space, OOTD, and beauty (face/nail): mock/base image -> cart items -> cart-only AI preview -> report project.
 ---
 
 # Pic to Pick (Focused)
 
-This skill is intentionally narrowed to **one reliable flow**:
+This skill supports three reliable Amazon flows:
 
 - Home space image (renovation done, furniture missing)
-- Diagnose and build a shopping plan
-- Add products to Amazon cart
-- Pull real cart product images
-- Generate structure-locked, cart-only preview image
-- Package a report project (`REPORT.md + images + data + manifest`)
+- OOTD full-body outfit (e.g., kids 9:16)
+- Beauty close-up (face makeup / nail design)
 
 ## Scope
 
-Supported: `home-space -> Amazon -> cart -> preview -> report-project`
+Supported:
 
-Not supported in this focused version:
+- `home-space -> Amazon -> cart -> preview -> report-project`
+- `ootd -> Amazon -> cart -> preview -> report-project`
+- `beauty-face / beauty-nail -> Amazon -> cart -> preview -> report-project`
 
-- outfit planning
+Not supported:
+
 - multi-site shopping orchestration
 - Taobao/Tmall flow
 
@@ -51,6 +51,7 @@ Not supported in this focused version:
   - sofa / rug / coffee table / curtains / floor lamp
   - accent chair / side table / stool-ottoman
   - pillows-throw / plant
+- For OOTD/beauty scenes, use a compact but complete cart set (typically 6-10 items).
 
 4. Pull real cart product images
 - Run `scripts/amazon_cart_pull_images.py`.
@@ -58,11 +59,13 @@ Not supported in this focused version:
 
 5. Generate AI preview (strict)
 - Use `scripts/nano_banana_generate_image.py` with:
+  - `--scene home|ootd|beauty-face|beauty-nail` (or `auto`)
   - `--cart-items-json`
   - `--enforce-cart-only`
   - `--must-have-category ...` (if needed)
   - `--enforce-structure-lock`
   - `--aspect-ratio auto`
+  - `--quality-gate auto|on|off` and `--max-attempts` for auto-regeneration when change is too weak
 - Default resolution is `1K` unless explicitly overridden.
 
 6. Build report project

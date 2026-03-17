@@ -43,7 +43,52 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     "coffee table": ("coffee table", "tea table", "center table"),
     "armchair": ("armchair", "accent chair", "single chair"),
     "side table": ("side table", "end table", "nightstand"),
+    # OOTD / outfit
+    "top": ("t-shirt", "tee", "shirt", "blouse", "sweater", "hoodie", "top"),
+    "bottom": ("pants", "trousers", "jeans", "skirt", "shorts", "bottom"),
+    "outerwear": ("jacket", "coat", "cardigan", "windbreaker", "outerwear"),
+    "dress": ("dress", "one-piece", "one piece"),
+    "shoes": ("shoe", "sneaker", "boots", "sandals", "loafer"),
+    "hat": ("hat", "cap", "beanie", "bucket hat"),
+    "bag": ("bag", "backpack", "crossbody", "purse", "tote"),
+    "socks": ("sock", "stocking", "hosiery"),
+    "accessory": ("scarf", "belt", "watch", "glasses", "sunglasses", "bracelet", "necklace"),
+    # Beauty / makeup
+    "foundation": ("foundation", "bb cream", "cc cream", "concealer", "primer"),
+    "blush": ("blush", "cheek"),
+    "lip": ("lipstick", "lip gloss", "lip tint", "lip liner", "lip"),
+    "eye makeup": ("eyeshadow", "eyeliner", "mascara", "brow pencil", "eyebrow", "eye makeup"),
+    "makeup tool": ("brush", "beauty blender", "sponge", "makeup puff", "curler"),
+    # Nail
+    "nail polish": ("nail polish", "gel polish", "nail color", "polish"),
+    "press-on nails": ("press on nails", "press-on nails", "fake nails", "acrylic nails", "nail tips"),
+    "nail sticker": ("nail sticker", "nail decal", "nail art sticker"),
+    "nail tool": ("nail file", "cuticle", "uv lamp", "nail drill", "dotting tool"),
 }
+
+HOME_SCENE_CATEGORIES = {
+    "sofa",
+    "stool/ottoman",
+    "rug",
+    "curtain",
+    "floor lamp",
+    "coffee table",
+    "armchair",
+    "side table",
+}
+OOTD_SCENE_CATEGORIES = {
+    "top",
+    "bottom",
+    "outerwear",
+    "dress",
+    "shoes",
+    "hat",
+    "bag",
+    "socks",
+    "accessory",
+}
+BEAUTY_FACE_SCENE_CATEGORIES = {"foundation", "blush", "lip", "eye makeup", "makeup tool"}
+BEAUTY_NAIL_SCENE_CATEGORIES = {"nail polish", "press-on nails", "nail sticker", "nail tool"}
 
 
 def get_api_key(provided_key: str | None) -> str | None:
@@ -103,6 +148,29 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Append hard constraints to preserve architecture and camera geometry.",
     )
+    parser.add_argument(
+        "--scene",
+        default="auto",
+        choices=["auto", "home", "ootd", "beauty-face", "beauty-nail"],
+        help="Scene template for stronger constraints (default: auto).",
+    )
+    parser.add_argument(
+        "--quality-gate",
+        default="auto",
+        choices=["auto", "on", "off"],
+        help="Quality gate mode; auto enables scene-specific checks for beauty/ootd.",
+    )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        default=3,
+        help="Max generation attempts when quality gate is enabled.",
+    )
+    parser.add_argument(
+        "--keep-attempts",
+        action="store_true",
+        help="Keep intermediate attempt files (default: false).",
+    )
     parser.add_argument("--api-key", "-k", help="Gemini API key override")
     return parser.parse_args()
 
@@ -145,7 +213,7 @@ def choose_aspect_ratio(aspect_ratio_arg: str, images) -> str | None:
     return nearest
 
 
-def save_first_image_part(response, output_path: Path) -> bool:
+def extract_first_image_part(response):
     from PIL import Image as PILImage
 
     for part in response.parts:
@@ -160,13 +228,17 @@ def save_first_image_part(response, output_path: Path) -> bool:
         if image.mode == "RGBA":
             rgb = PILImage.new("RGB", image.size, (255, 255, 255))
             rgb.paste(image, mask=image.split()[3])
-            rgb.save(str(output_path), "PNG")
+            return rgb
         elif image.mode == "RGB":
-            image.save(str(output_path), "PNG")
+            return image
         else:
-            image.convert("RGB").save(str(output_path), "PNG")
-        return True
-    return False
+            return image.convert("RGB")
+    return None
+
+
+def save_image(image, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(str(output_path), "PNG")
 
 
 def load_cart_items(cart_items_json: str) -> list[dict]:
@@ -198,22 +270,87 @@ def infer_categories_from_title(title: str) -> set[str]:
     return hit
 
 
+def infer_scene(scene_arg: str, base_prompt: str, cart_items: list[dict] | None) -> str:
+    if scene_arg != "auto":
+        return scene_arg
+
+    categories: set[str] = set()
+    if cart_items:
+        for item in cart_items:
+            if isinstance(item, dict):
+                categories |= infer_categories_from_title(str(item.get("title", "")))
+
+    if categories & BEAUTY_FACE_SCENE_CATEGORIES:
+        return "beauty-face"
+    if categories & BEAUTY_NAIL_SCENE_CATEGORIES:
+        return "beauty-nail"
+    if categories & OOTD_SCENE_CATEGORIES:
+        return "ootd"
+    if categories & HOME_SCENE_CATEGORIES:
+        return "home"
+
+    text = base_prompt.lower()
+    if any(x in text for x in ["lipstick", "eyeshadow", "makeup", "face makeup", "blush"]):
+        return "beauty-face"
+    if any(x in text for x in ["press-on", "press on", "nail", "manicure", "rhinestone"]):
+        return "beauty-nail"
+    if any(x in text for x in ["outfit", "ootd", "wear", "fashion look", "full-body", "full body"]):
+        return "ootd"
+    return "home"
+
+
+def build_scene_constraints(scene: str) -> list[str]:
+    if scene == "beauty-face":
+        return [
+            "Scene template: beauty-face.",
+            "Keep face identity, facial geometry, head pose, and camera framing unchanged.",
+            "Apply visible makeup changes only from cart items.",
+            "If cart includes lipstick, lip color must visibly match lipstick shade.",
+            "If cart includes eyeshadow/eye makeup, eyelid color must visibly match that shade family.",
+            "No non-cart cosmetics, jewelry, props, or text overlays.",
+        ]
+    if scene == "beauty-nail":
+        return [
+            "Scene template: beauty-nail.",
+            "Keep hand pose, finger geometry, skin texture, and camera framing unchanged.",
+            "Apply nail style/color/shape strictly from cart items.",
+            "For press-on/rhinestone products, preserve obvious style cues (shape/decor/shine).",
+            "Difference from base should be clearly visible on nails only.",
+            "No rings, extra hands, tools, or non-cart decorations.",
+        ]
+    if scene == "ootd":
+        return [
+            "Scene template: ootd.",
+            "Keep person identity, body pose, face, background, and camera framing unchanged.",
+            "Update outfit/accessories only with categories present in cart items.",
+            "No non-cart wearable objects or unrelated props.",
+        ]
+    return [
+        "Scene template: home interior.",
+        "Keep room geometry and camera framing fixed.",
+        "Only render purchasable decor/furniture from cart items.",
+    ]
+
+
 def build_guardrail_prompt(
     base_prompt: str,
     cart_items: list[dict] | None,
     enforce_cart_only: bool,
     must_have_categories: list[str],
     enforce_structure_lock: bool,
+    scene: str,
 ) -> str:
     constraints: list[str] = []
+
+    constraints.extend(build_scene_constraints(scene))
 
     if enforce_structure_lock:
         constraints.extend(
             [
-                "Architecture and camera lock: keep door/window/wall positions unchanged.",
-                "Keep built-ins, ceiling lines, floor perspective, and camera viewpoint unchanged.",
-                "Preserve framing and composition ratio consistent with Image-1.",
-                "Only add soft furnishings; do not alter room layout or structural geometry.",
+                "Composition and viewpoint lock: keep subject pose, framing, and camera perspective unchanged.",
+                "Preserve key background geometry and relative object positions from Image-1.",
+                "Keep output framing/aspect ratio consistent with Image-1.",
+                "If this is an interior scene, keep doors/windows/walls/built-ins unchanged.",
             ]
         )
 
@@ -261,6 +398,71 @@ def build_guardrail_prompt(
     )
 
 
+def should_enable_quality_gate(mode: str, scene: str) -> bool:
+    if mode == "on":
+        return True
+    if mode == "off":
+        return False
+    return scene in {"beauty-face", "beauty-nail", "ootd"}
+
+
+def _roi_box(w: int, h: int, x1: float, y1: float, x2: float, y2: float) -> tuple[int, int, int, int]:
+    return (int(w * x1), int(h * y1), int(w * x2), int(h * y2))
+
+
+def mean_abs_diff(base_img, cand_img, box=None) -> float:
+    from PIL import ImageChops, ImageStat
+
+    if cand_img.size != base_img.size:
+        cand_img = cand_img.resize(base_img.size)
+    if box is not None:
+        base_crop = base_img.crop(box)
+        cand_crop = cand_img.crop(box)
+    else:
+        base_crop = base_img
+        cand_crop = cand_img
+    diff = ImageChops.difference(base_crop, cand_crop)
+    st = ImageStat.Stat(diff)
+    return float(sum(st.mean) / max(len(st.mean), 1))
+
+
+def evaluate_quality(scene: str, base_img, cand_img) -> tuple[bool, float, str]:
+    w, h = base_img.size
+    global_diff = mean_abs_diff(base_img, cand_img)
+
+    if scene == "beauty-face":
+        mouth_box = _roi_box(w, h, 0.30, 0.58, 0.70, 0.84)
+        left_eye_box = _roi_box(w, h, 0.12, 0.26, 0.42, 0.50)
+        right_eye_box = _roi_box(w, h, 0.58, 0.26, 0.88, 0.50)
+        mouth_diff = mean_abs_diff(base_img, cand_img, mouth_box)
+        eye_diff = (mean_abs_diff(base_img, cand_img, left_eye_box) + mean_abs_diff(base_img, cand_img, right_eye_box)) / 2.0
+        score = min(mouth_diff, eye_diff)
+        passed = mouth_diff >= 4.0 and eye_diff >= 3.6 and global_diff >= 2.0
+        msg = f"global={global_diff:.2f}, mouth={mouth_diff:.2f}, eyes={eye_diff:.2f}"
+        return passed, score, msg
+
+    if scene == "beauty-nail":
+        nail_box = _roi_box(w, h, 0.16, 0.16, 0.90, 0.78)
+        nail_diff = mean_abs_diff(base_img, cand_img, nail_box)
+        score = nail_diff
+        passed = nail_diff >= 4.8 and global_diff >= 2.0
+        msg = f"global={global_diff:.2f}, nails={nail_diff:.2f}"
+        return passed, score, msg
+
+    if scene == "ootd":
+        body_box = _roi_box(w, h, 0.20, 0.18, 0.82, 0.92)
+        body_diff = mean_abs_diff(base_img, cand_img, body_box)
+        score = body_diff
+        passed = body_diff >= 4.5 and global_diff >= 2.0
+        msg = f"global={global_diff:.2f}, body={body_diff:.2f}"
+        return passed, score, msg
+
+    score = global_diff
+    passed = global_diff >= 1.8
+    msg = f"global={global_diff:.2f}"
+    return passed, score, msg
+
+
 def main() -> None:
     args = parse_args()
     api_key = get_api_key(args.api_key)
@@ -283,6 +485,9 @@ def main() -> None:
             print(f"Error loading cart items: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    scene = infer_scene(args.scene, args.prompt, cart_items)
+    print(f"Scene inferred: {scene}")
+
     try:
         final_prompt = build_guardrail_prompt(
             base_prompt=args.prompt,
@@ -290,6 +495,7 @@ def main() -> None:
             enforce_cart_only=args.enforce_cart_only,
             must_have_categories=args.must_have_category,
             enforce_structure_lock=args.enforce_structure_lock,
+            scene=scene,
         )
     except Exception as exc:  # noqa: BLE001
         print(f"Error building constrained prompt: {exc}", file=sys.stderr)
@@ -309,26 +515,76 @@ def main() -> None:
         print(f"Generating image with resolution {resolution}{ratio_msg}...")
 
     client = genai.Client(api_key=api_key)
-    try:
-        response = client.models.generate_content(
-            model=args.model,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["TEXT", "IMAGE"],
-                image_config=types.ImageConfig(
-                    image_size=resolution,
-                    aspect_ratio=aspect_ratio,
-                ),
-            ),
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"Error generating image: {exc}", file=sys.stderr)
-        sys.exit(1)
+    quality_gate_enabled = should_enable_quality_gate(args.quality_gate, scene) and bool(images)
+    max_attempts = max(int(args.max_attempts), 1)
+    if not quality_gate_enabled:
+        max_attempts = 1
+    print(f"Quality gate: {'on' if quality_gate_enabled else 'off'} (attempts={max_attempts})")
 
-    saved = save_first_image_part(response, output_path)
-    if not saved:
+    best_score = -1.0
+    best_path: Path | None = None
+    passed_path: Path | None = None
+    created_attempts: list[Path] = []
+
+    base_img = images[0].convert("RGB") if images else None
+
+    for attempt in range(1, max_attempts + 1):
+        attempt_path = output_path.with_name(f"{output_path.stem}.attempt-{attempt}.png")
+        created_attempts.append(attempt_path)
+        try:
+            response = client.models.generate_content(
+                model=args.model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    response_modalities=["TEXT", "IMAGE"],
+                    image_config=types.ImageConfig(
+                        image_size=resolution,
+                        aspect_ratio=aspect_ratio,
+                    ),
+                ),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Error generating image (attempt {attempt}): {exc}", file=sys.stderr)
+            continue
+
+        image = extract_first_image_part(response)
+        if image is None:
+            print(f"No image returned by model (attempt {attempt}).", file=sys.stderr)
+            continue
+        save_image(image, attempt_path)
+
+        if not quality_gate_enabled or base_img is None:
+            passed_path = attempt_path
+            break
+
+        passed, score, metrics_msg = evaluate_quality(scene, base_img, image.convert("RGB"))
+        print(f"Attempt {attempt} quality: {metrics_msg} -> {'PASS' if passed else 'FAIL'}")
+        if score > best_score:
+            best_score = score
+            best_path = attempt_path
+        if passed:
+            passed_path = attempt_path
+            break
+
+    chosen = passed_path or best_path
+    if chosen is None or not chosen.exists():
         print("Error: No image returned by model.", file=sys.stderr)
         sys.exit(1)
+
+    if chosen != output_path:
+        output_path.write_bytes(chosen.read_bytes())
+
+    if not args.keep_attempts:
+        for p in created_attempts:
+            if p == chosen:
+                continue
+            if p.exists():
+                p.unlink()
+    if chosen.exists() and chosen != output_path and not args.keep_attempts:
+        chosen.unlink(missing_ok=True)
+
+    if quality_gate_enabled and passed_path is None:
+        print("Quality gate fallback: no attempt passed; selected best attempt by score.")
 
     print(f"Image saved: {output_path.resolve()}")
 
