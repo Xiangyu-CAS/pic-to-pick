@@ -2,9 +2,11 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-Turn visual inspiration into shoppable picks.
+Turn pictures into shoppable picks.
 
-`pic-to-pick` takes a reference image, understands the space and style cues, suggests what to buy, finds matching items on shopping websites, adds them to the cart, and generates an AI preview of how the selected items could look together.
+`pic-to-pick` turns a reference image into shopping recommendations, cart-ready product matches, and an AI preview.
+
+It understands the space and style cues in the image, suggests what to buy, and helps carry the workflow from inspiration to purchase.
 
 Compatible with OpenClaw, Claude Code, and Codex.
 
