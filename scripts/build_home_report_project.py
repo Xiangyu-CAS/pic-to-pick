@@ -21,6 +21,38 @@ from pathlib import Path
 from typing import Any
 
 
+def load_workspace_env() -> None:
+    candidates = [
+        Path("/Users/zhuxiangyu/.openclaw/workspace/skills/.env"),
+        Path(__file__).resolve().parents[2] / ".env",
+    ]
+    for env_path in candidates:
+        if not env_path.exists():
+            continue
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+        break
+
+
+def normalize_proxy_env() -> None:
+    keep_proxy = os.environ.get("PIC_TO_PICK_KEEP_PROXY", "").lower() in {"1", "true", "yes"}
+    if keep_proxy:
+        return
+    proxy_vals = {
+        k: os.environ.get(k)
+        for k in ["ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"]
+    }
+    if any((proxy_vals.get(k) or "").startswith("socks") for k in proxy_vals):
+        for k in proxy_vals:
+            os.environ.pop(k, None)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build a home-decoration markdown report project from run artifacts."
@@ -591,6 +623,8 @@ def build_cart_amount_summary(items: list[dict], cart_summary: dict, lang: str) 
 
 
 def main() -> None:
+    load_workspace_env()
+    normalize_proxy_env()
     args = parse_args()
     run_dir = Path(args.run_dir).expanduser().resolve()
     if not run_dir.exists():

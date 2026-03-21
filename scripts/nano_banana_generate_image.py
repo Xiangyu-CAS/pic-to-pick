@@ -19,6 +19,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from io import BytesIO
 from pathlib import Path
@@ -91,9 +92,71 @@ BEAUTY_FACE_SCENE_CATEGORIES = {"foundation", "blush", "lip", "eye makeup", "mak
 BEAUTY_NAIL_SCENE_CATEGORIES = {"nail polish", "press-on nails", "nail sticker", "nail tool"}
 
 
+def maybe_reexec_with_uv() -> None:
+    if os.environ.get("PIC_TO_PICK_UV_REEXEC") == "1":
+        return
+    if os.environ.get("VIRTUAL_ENV") and "uv" in os.environ.get("VIRTUAL_ENV", ""):
+        return
+    argv0 = Path(sys.argv[0]).name
+    if argv0 != Path(__file__).name:
+        return
+    if not shutil_which("uv"):
+        return
+    try:
+        import google  # noqa: F401
+        return
+    except Exception:
+        pass
+    env = os.environ.copy()
+    env["PIC_TO_PICK_UV_REEXEC"] = "1"
+    cmd = ["uv", "run", __file__, *sys.argv[1:]]
+    raise SystemExit(subprocess.call(cmd, env=env))
+
+
+def shutil_which(name: str) -> str | None:
+    for p in os.environ.get("PATH", "").split(os.pathsep):
+        cand = Path(p) / name
+        if cand.exists() and os.access(cand, os.X_OK):
+            return str(cand)
+    return None
+
+
+def load_workspace_env() -> None:
+    candidates = [
+        Path("/Users/zhuxiangyu/.openclaw/workspace/skills/.env"),
+        Path(__file__).resolve().parents[2] / ".env",
+    ]
+    for env_path in candidates:
+        if not env_path.exists():
+            continue
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+        break
+
+
+def normalize_proxy_env() -> None:
+    keep_proxy = os.environ.get("PIC_TO_PICK_KEEP_PROXY", "").lower() in {"1", "true", "yes"}
+    if keep_proxy:
+        return
+    proxy_vals = {
+        k: os.environ.get(k)
+        for k in ["ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"]
+    }
+    if any((proxy_vals.get(k) or "").startswith("socks") for k in proxy_vals):
+        for k in proxy_vals:
+            os.environ.pop(k, None)
+
+
 def get_api_key(provided_key: str | None) -> str | None:
     if provided_key:
         return provided_key
+    load_workspace_env()
     return os.environ.get("GEMINI_API_KEY")
 
 
@@ -464,7 +527,9 @@ def evaluate_quality(scene: str, base_img, cand_img) -> tuple[bool, float, str]:
 
 
 def main() -> None:
+    maybe_reexec_with_uv()
     args = parse_args()
+    normalize_proxy_env()
     api_key = get_api_key(args.api_key)
     if not api_key:
         print("Error: No API key provided.", file=sys.stderr)
@@ -532,15 +597,19 @@ def main() -> None:
         attempt_path = output_path.with_name(f"{output_path.stem}.attempt-{attempt}.png")
         created_attempts.append(attempt_path)
         try:
+            image_config_kwargs = {}
+            if aspect_ratio:
+                image_config_kwargs["aspect_ratio"] = aspect_ratio
+
+            # Newer google-genai SDKs no longer accept image_size in ImageConfig
+            # for generate_content image responses, so keep this call compatible
+            # and rely on post-composition export for print-size delivery.
             response = client.models.generate_content(
                 model=args.model,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     response_modalities=["TEXT", "IMAGE"],
-                    image_config=types.ImageConfig(
-                        image_size=resolution,
-                        aspect_ratio=aspect_ratio,
-                    ),
+                    image_config=types.ImageConfig(**image_config_kwargs),
                 ),
             )
         except Exception as exc:  # noqa: BLE001

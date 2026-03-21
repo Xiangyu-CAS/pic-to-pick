@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import socket
 import subprocess
 import sys
 import time
@@ -37,27 +39,45 @@ def parse_args() -> argparse.Namespace:
         help="Optional txt/json file for keywords (txt: one per line; json: array of strings)",
     )
     parser.add_argument("--max-links-per-keyword", type=int, default=8, help="Max candidate links per keyword")
+    parser.add_argument("--max-items", type=int, default=6, help="Maximum cart items to add from the keyword list")
     parser.add_argument("--cmd-timeout-sec", type=int, default=60, help="Timeout for each openclaw command")
     parser.add_argument("--cart-url", default="https://www.amazon.com/cart?ref_=nav_cart")
     return parser.parse_args()
 
 
 def run_cmd(args: list[str], timeout_sec: int = 60) -> str:
-    try:
-        proc = subprocess.run(
-            args,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout_sec,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"Command timeout ({timeout_sec}s): {' '.join(args)}") from exc
-    if proc.returncode != 0:
+    attempts = 2
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        try:
+            proc = subprocess.run(
+                args,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"Command timeout ({timeout_sec}s): {' '.join(args)}") from exc
+        if proc.returncode == 0:
+            return proc.stdout
+        combined = f"{proc.stdout}\n{proc.stderr}"
+        last_err = (proc.returncode, combined)
+        retryable = "node disconnected (browser.proxy)" in combined.lower()
+        if retryable and attempt < attempts:
+            subprocess.run(
+                ["openclaw", "browser", "--browser-profile", "user", "start", "--json"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout_sec,
+            )
+            time.sleep(2.0)
+            continue
         print(proc.stdout, end="")
         print(proc.stderr, end="", file=sys.stderr)
         raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(args)}")
-    return proc.stdout
+    raise RuntimeError(f"Command failed after retries: {' '.join(args)} :: {last_err}")
 
 
 def first_json_blob(text: str):
@@ -156,6 +176,8 @@ def load_keywords(args: argparse.Namespace) -> list[str]:
             continue
         seen.add(kw)
         dedup.append(kw)
+    if args.max_items > 0:
+        dedup = dedup[: args.max_items]
     return dedup
 
 
@@ -313,6 +335,8 @@ def main() -> None:
     args = parse_args()
     out_dir = Path(args.out_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    started_at_epoch = time.time()
+    started_at_iso = time.strftime('%Y-%m-%dT%H:%M:%S%z', time.localtime(started_at_epoch))
     keywords = load_keywords(args)
     if not keywords:
         raise SystemExit("No keywords provided")
@@ -354,7 +378,27 @@ def main() -> None:
             copied_shot = out_dir / f"{time.strftime('%Y-%m-%d')}-cart-fullpage.jpg"
             copied_shot.write_bytes(src.read_bytes())
 
+    finished_at_epoch = time.time()
+    finished_at_iso = time.strftime('%Y-%m-%dT%H:%M:%S%z', time.localtime(finished_at_epoch))
+
+    run_meta = {
+        "source": "live_browser_run",
+        "script": str(Path(__file__).resolve()),
+        "pid": os.getpid(),
+        "host": socket.gethostname(),
+        "started_at_iso": started_at_iso,
+        "finished_at_iso": finished_at_iso,
+        "duration_sec": round(finished_at_epoch - started_at_epoch, 2),
+        "browser_profile": args.browser_profile,
+        "out_dir": str(out_dir),
+        "keywords_count": len(keywords),
+        "max_items": args.max_items,
+    }
+    run_meta_path = out_dir / "cart-build-run-meta.json"
+    run_meta_path.write_text(json.dumps(run_meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
     summary = {
+        "run_meta": run_meta,
         "keywords": keywords,
         "added_count": len(added),
         "failed_count": len(failed),
@@ -368,6 +412,7 @@ def main() -> None:
     summary_path = out_dir / "cart-build-summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    print(f"run_meta_json: {run_meta_path}")
     print(f"added_count: {len(added)}")
     print(f"failed_count: {len(failed)}")
     print(f"summary_json: {summary_path}")
