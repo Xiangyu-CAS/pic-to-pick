@@ -53,6 +53,12 @@ Not supported:
 
 3. Space diagnosis
 - Output: keep / buy-now / buy-later and category budgets.
+- For `ootd`, diagnose the **visible crop first** before choosing shoppable categories.
+- Do not default to a full-body outfit template when the image is a portrait or half-body shot.
+- Category selection must follow what the image can actually support:
+  - **half-body / portrait:** prioritize visible or near-visible categories such as `top`, `outerwear`, neckline/layering upgrades, and low-noise accessories like `watch` only when they materially help.
+  - **full-body:** then consider `bottom`, `shoes`, and full silhouette composition.
+- Never add a category just because it is common in OOTD flows. If the crop does not meaningfully show it, do not force it into the cart unless the user explicitly asks for a full look.
 
 4. Amazon cart execution
 - Use `openclaw browser --browser-profile user`.
@@ -66,7 +72,9 @@ Not supported:
   3. only then a small number of finish/detail items if budget and slot count still allow
 - Recommended cart composition by scene:
   - **home-space:** usually 4-6 items total. Prioritize `sofa / rug / coffee table / curtains / floor lamp / accent chair`. Treat side table, ottoman, pillows, throw, plant as lower-priority fillers.
-  - **ootd:** usually 3-6 items total. Prioritize the visually dominant wearable pieces first: `top / bottom or dress / shoes / outerwear`. Add bag/hat/jewelry only if they materially improve the look.
+  - **ootd:** usually 2-6 items total, but let the image crop decide.
+    - **half-body / portrait:** usually 2-4 items. Prioritize `top / outerwear / visible accessory`. Do **not** default to `bottom` or `shoes` unless the user explicitly wants a full look or those areas are actually visible enough to matter.
+    - **full-body:** prioritize the visually dominant wearable pieces first: `top / bottom or dress / shoes / outerwear`. Add bag/hat/jewelry only if they materially improve the look.
   - **beauty-face:** usually 2-3 items total. Prioritize the products most visible in the requested look, for example `lip + eye` or `base + lip + eye`.
   - **beauty-nail:** usually 1 item total, optionally 2 if one is the core polish/press-on and one is a clearly necessary support item.
 - Avoid spending cart slots on low-impact accessories before the main composition is already satisfied.
@@ -126,14 +134,22 @@ Important: do both.
 - Write the step artifacts to files.
 - Also send a short in-chat progress reply after each step so the user sees the result during the conversation instead of waiting silently.
 
+**Mandatory confirmation gate before preview generation**
+- After product selection/cart build, always show the user the **product board image** plus a **product table/summary with prices** first.
+- Then pause for confirmation before generating the preview image.
+- Do not proceed to Nano Banana preview generation until the user explicitly confirms, even if the selected cart looks reasonable.
+- If the user requests changes after seeing the board/table, update the cart first and re-show the revised board/table before any preview step.
+
 Recommended chat cadence:
 1. After recommendation/diagnosis:
    - Send a brief text summary of the proposed layout / outfit direction.
 2. After product selection/cart build:
    - Send a brief summary with item count, notable categories, and cart total.
    - Explicitly explain why each selected item made the cut if the cart is small or heavily prioritized.
-   - Mention that product board / cart evidence is ready.
-3. Before Nano Banana generation:
+   - Send or surface the **product board image**.
+   - Include a concise **product table/summary with unit price, quantity, and line total**.
+   - Ask for confirmation to continue.
+3. Only after user confirmation, before Nano Banana generation:
    - Send a brief summary of the final prompt intent and how many reference images will be sent.
 4. After preview generation:
    - Send a brief summary that preview is ready and mention any obvious quality/structure caveat if already noticed.
