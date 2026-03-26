@@ -54,6 +54,10 @@ Not supported:
 3. Space diagnosis
 - Output: keep / buy-now / buy-later and category budgets.
 - For `ootd`, diagnose the **visible crop first** before choosing shoppable categories.
+- For `ootd`, infer the likely wearer **gender presentation / target rack** from the image and the user's wording before searching products.
+- Do **not** default to `boys/men` or `girls/women` just because the subject is a child or because one catalog is easier to search.
+- If the image strongly reads as girl-coded, search `girls` items first; if it strongly reads as boy-coded, search `boys` items first.
+- If gender presentation is ambiguous, ask the user before building the cart, or use gender-neutral kids keywords explicitly and say that you are doing so.
 - Do not default to a full-body outfit template when the image is a portrait or half-body shot.
 - Category selection must follow what the image can actually support:
   - **half-body / portrait:** prioritize visible or near-visible categories such as `top`, `outerwear`, neckline/layering upgrades, and low-noise accessories like `watch` only when they materially help.
